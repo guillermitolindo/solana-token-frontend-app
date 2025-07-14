@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solana Token Creator</title>
+    <script src="https://unpkg.com/@solana/web3.js@1.91.8/lib/index.iife.min.js"></script>
+    <script src="https://unpkg.com/@solana/spl-token@0.4.0/lib/index.iife.min.js"></script>
+    <script src="https://unpkg.com/@metaplex-foundation/js@0.20.1/dist/browser.min.js"></script>
+  </head>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f7f6; color: #333; }
+        .container { max-width: 650px; margin: auto; background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #2c3e50; margin-bottom: 25px; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; color: #555; }
+        input[type="text"], input[type="number"], textarea {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        input[type="file"] {
+            width: 100%;
+            padding: 10px 0; /* Ajuste para input file */
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+            width: 100%;
+            margin-bottom: 10px;
+            transition: background-color 0.3s ease;
+        }
+        button:hover { background-color: #45a049; }
+        button:disabled { background-color: #cccccc; cursor: not-allowed; }
+        #status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: #e9ecef;
+            color: #333;
+            font-size: 15px;
+            word-break: break-all;
+        }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+        .wallet-info { text-align: center; margin-bottom: 20px; padding: 10px; border: 1px dashed #ccc; border-radius: 5px; background-color: #f0f0f0; }
+        #connectWalletBtn { background-color: #007bff; }
+        #connectWalletBtn:hover { background-color: #0056b3; }
+        a { color: #007bff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .form-check { margin-bottom: 10px; }
+        .form-check-input { margin-right: 8px; transform: scale(1.2); }
+        .form-check-label { display: inline-block; font-weight: normal; }
+        .text-muted { font-size: 0.9em; color: #666; margin-top: 4px; display: block;}
+        h3 { color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-top: 30px; margin-bottom: 20px;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛠️ Creador de Tokens Solana Online</h1>
+
+        <div class="wallet-info">
+            <button id="connectWalletBtn">Conectar Phantom</button>
+            <p id="walletAddressDisplay">Estado: Desconectado</p>
+            <p id="solBalanceDisplay"></p>
+        </div>
+
+        <hr>
+
+        <form id="createTokenForm">
+            <label for="tokenName">Nombre del Token:</label>
+            <input type="text" id="tokenName" value="Mi Token Ficticio" required>
+
+            <label for="tokenSymbol">Símbolo (Ticker):</label>
+            <input type="text" id="tokenSymbol" value="MTF" maxlength="10" required>
+
+            <label for="tokenDecimals">Decimales (Ej: 9 para la mayoría):</label>
+            <input type="number" id="tokenDecimals" value="9" min="0" max="9" required>
+
+            <label for="initialSupply">Suministro Inicial:</label>
+            <input type="number" id="initialSupply" value="1000000" min="1" required>
+
+            <label for="tokenImage">Imagen del Logo (PNG, JPG, GIF):</label>
+            <input type="file" id="tokenImage" accept="image/png, image/jpeg, image/gif" required>
+
+            <label for="websiteUrl">URL del Sitio Web:</label>
+            <input type="text" id="websiteUrl" value="https://mi-token.com" placeholder="Ej: https://mi-token.com" required>
+
+            <label for="twitterUrl">URL de Twitter:</label>
+            <input type="text" id="twitterUrl" value="https://twitter.com/mi_token" placeholder="Ej: https://twitter.com/mi_token" required>
+
+            <label for="tokenDescription">Descripción del Token:</label>
+            <textarea id="tokenDescription" rows="3" placeholder="Una breve descripción de tu token." required>Este es mi token de ejemplo creado en Solana con metadatos completos.</textarea>
+
+            <div class="form-group">
+                <h3>Opciones de Inmutabilidad (Avanzado)</h3>
+                <p class="text-muted">Marcar estas opciones hará que tu token sea más inmutable y confiable, pero las acciones no podrán revertirse.</p>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="revokeMintAuthority" checked>
+                    <label class="form-check-label" for="revokeMintAuthority">
+                        Revocar Autoridad de Acuñación (Mint Authority)
+                        <small class="form-text text-muted">Nadie podrá acuñar más tokens después de la creación inicial.</small>
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="revokeFreezeAuthority" checked>
+                    <label class="form-check-label" for="revokeFreezeAuthority">
+                        Revocar Autoridad de Congelación (Freeze Authority)
+                        <small class="form-text text-muted">Nadie podrá congelar las cuentas de token de los usuarios.</small>
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="revokeUpdateAuthority" checked>
+                    <label class="form-check-label" for="revokeUpdateAuthority">
+                        Revocar Autoridad de Actualización de Metadatos (Update Authority)
+                        <small class="form-text text-muted">Nadie podrá cambiar el nombre, símbolo o imagen del token después de la creación.</small>
+                    </label>
+                </div>
+            </div>
+
+            <button type="submit" id="createTokenBtn">Crear Token</button>
+        </form>
+
+        <div id="status">Esperando conexión de billetera...</div>
+    </div>
+
+    <script>
+        <script>
+        // === ACCESO ROBUSTO A LIBRERÍAS CDN ===
+        // Las librerías cargadas via CDN (IIFE format) suelen exponer sus contenidos
+        // directamente a objetos globales en el 'window'.
+        // Usamos fallbacks por si el nombre global varía (ej. mayúscula/minúscula).
+
+        // Accede a las funciones de @solana/web3.js
+        // Prueba con 'solanaWeb3' (minúscula) o 'SolanaWeb3' (mayúscula)
+        const SolanaWeb3Global = window.solanaWeb3 || window.SolanaWeb3;
+        if (!SolanaWeb3Global) {
+            console.error("Error: @solana/web3.js no se cargó correctamente o no expuso su objeto global 'solanaWeb3'/'SolanaWeb3'.");
+            // Aquí podrías deshabilitar botones o mostrar un mensaje al usuario
+        }
+        const Connection = SolanaWeb3Global ? SolanaWeb3Global.Connection : undefined;
+        const PublicKey = SolanaWeb3Global ? SolanaWeb3Global.PublicKey : undefined;
+        const Transaction = SolanaWeb3Global ? SolanaWeb3Global.Transaction : undefined;
+        const clusterApiUrl = SolanaWeb3Global ? SolanaWeb3Global.clusterApiUrl : undefined;
+
+        // Accede a las funciones de @solana/spl-token
+        // Prueba con 'splToken' (minúscula)
+        const SplTokenGlobal = window.splToken;
+        if (!SplTokenGlobal) {
+            console.error("Error: @solana/spl-token no se cargó correctamente o no expuso su objeto global 'splToken'.");
+        }
+        const createMint = SplTokenGlobal ? SplTokenGlobal.createMint : undefined;
+        const getOrCreateAssociatedTokenAccount = SplTokenGlobal ? SplTokenGlobal.getOrCreateAssociatedTokenAccount : undefined;
+        const mintTo = SplTokenGlobal ? SplTokenGlobal.mintTo : undefined;
+        const setAuthority = SplTokenGlobal ? SplTokenGlobal.setAuthority : undefined;
+        const AuthorityType = SplTokenGlobal ? SplTokenGlobal.AuthorityType : undefined;
+
+        // Accede a las funciones de @metaplex-foundation/js
+        // Prueba con 'metaplexJs' (minúscula)
+        const MetaplexJsGlobal = window.metaplexJs;
+        if (!MetaplexJsGlobal) {
+            console.error("Error: @metaplex-foundation/js no se cargó correctamente o no expuso su objeto global 'metaplexJs'.");
+        }
+        const Metaplex = MetaplexJsGlobal ? MetaplexJsGlobal.Metaplex : undefined;
+        const toMetaplexFile = MetaplexJsGlobal ? MetaplexJsGlobal.toMetaplexFile : undefined;
+        const bundlrStorage = MetaplexJsGlobal ? MetaplexJsGlobal.bundlrStorage : undefined;
+        const createCreateMetadataAccountV2Instruction = MetaplexJsGlobal ? MetaplexJsGlobal.createCreateMetadataAccountV2Instruction : undefined;
+        const TOKEN_METADATA_PROGRAM_ID = MetaplexJsGlobal ? MetaplexJsGlobal.PROGRAM_ID : undefined;
+
+        // === FIN DE ACCESO A LIBRERÍAS CDN ===
+
+        // **IMPORTANTE**: Para pruebas locales, usa la URL de tu backend local.
+        // Cuando despliegues, cámbiala a la URL pública de tu backend desplegado (ej. Render)
+        const BACKEND_URL = "http://localhost:3000";
+
+		// Configuración de la conexión a Solana (Devnet para pruebas)
+		// Asegúrate de que Connection y clusterApiUrl no sean undefined antes de usar
+		const connection = (Connection && clusterApiUrl) ? new Connection(clusterApiUrl('devnet'), 'confirmed') : null;
+		let metaplexInstance = null; // Lo inicializaremos más tarde si incluimos Metaplex
+
+        // ... (El resto de tu código JavaScript, incluyendo wallet, uploadToPinata, y el listener del botón)
+
+        // Referencias a elementos del DOM
+        const connectWalletBtn = document.getElementById('connectWalletBtn');
+        const walletAddressDisplay = document.getElementById('walletAddressDisplay');
+        const solBalanceDisplay = document.getElementById('solBalanceDisplay');
+        const createTokenForm = document.getElementById('createTokenForm');
+        const createTokenBtn = document.getElementById('createTokenBtn');
+        const statusDiv = document.getElementById('status');
+
+        // Deshabilita el botón de crear token hasta que la billetera esté conectada
+        createTokenBtn.disabled = true;
+
+        // Función para actualizar el estado y el tipo de mensaje
+        async function updateStatus(message, type = 'info') {
+            statusDiv.className = `status ${type}`; // Cambia la clase para CSS
+            statusDiv.innerHTML = message;
+        }
+
+        // Función para enviar y confirmar una transacción
+        async function sendAndConfirmTransaction(connection, transaction, signers) {
+            // Si la wallet está conectada, usaremos Phantom para firmar y enviar
+            if (window.solana && window.solana.isPhantom && walletConnected) {
+                transaction.feePayer = walletConnected;
+                transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+                const signedTransaction = await window.solana.signTransaction(transaction);
+                const signature = await connection.sendRawTransaction(signedTransaction.serialize());
+                await connection.confirmTransaction(signature, 'confirmed');
+                return signature;
+            } else {
+                // Fallback para cuando no se usa Phantom (no recomendado para dApps)
+                console.warn("No Phantom detected or wallet not connected. Falling back to local signer.");
+                const signature = await solanaWeb3.sendAndConfirmTransaction(connection, transaction, signers);
+                return signature;
+            }
+        }
+
+
+        // Función para conectar la billetera Phantom
+        async function connectWallet() {
+            if (window.solana && window.solana.isPhantom) {
+                try {
+                    updateStatus("Conectando a Phantom...", 'warning');
+                    const resp = await window.solana.connect();
+                    walletConnected = new PublicKey(resp.publicKey.toString());
+                    walletAddressDisplay.textContent = `Conectado: ${walletConnected.toBase58().substring(0, 6)}...${walletConnected.toBase58().slice(-6)}`;
+                    createTokenBtn.disabled = false;
+
+                    // Configurar conexión a Solana (Devnet para pruebas)
+                    connection = new Connection(solanaWeb3.clusterApiUrl('devnet'), 'confirmed');
+
+                    // Configurar Metaplex para que use la conexión
+                    metaplexInstance = Metaplex.make(connection);
+
+                    // Obtener y mostrar el balance de SOL
+                    const balance = await connection.getBalance(walletConnected);
+                    solBalanceDisplay.textContent = `Balance SOL: ${(balance / solanaWeb3.LAMPORTS_PER_SOL).toFixed(4)}`;
+                    updateStatus("¡Billetera Phantom conectada! Ahora puedes crear tu token.", 'success');
+
+                } catch (err) {
+                    console.error(err);
+                    updateStatus(`Error al conectar Phantom: ${err.message}`, 'error');
+                    walletConnected = null;
+                    walletAddressDisplay.textContent = 'Estado: Desconectado';
+                    createTokenBtn.disabled = true;
+                }
+            } else {
+                updateStatus('Phantom Wallet no detectada. Por favor, instálala: <a href="https://phantom.app/" target="_blank">phantom.app</a>', 'error');
+            }
+        }
+
+        // Event Listener para el botón de conectar billetera
+        connectWalletBtn.addEventListener('click', connectWallet);
+
+        // Event Listener para el formulario de creación del token
+        createTokenForm.addEventListener('submit', async (e) => {
+            e.preventDefault(); // Previene el envío por defecto del formulario
+
+            if (!walletConnected || !connection) {
+                updateStatus("Por favor, conecta tu billetera Phantom primero.", 'error');
+                return;
+            }
+
+            // Recoge los datos del formulario
+            const tokenName = document.getElementById('tokenName').value;
+            const tokenSymbol = document.getElementById('tokenSymbol').value;
+            const tokenDecimals = parseInt(document.getElementById('tokenDecimals').value);
+            const initialSupply = parseInt(document.getElementById('initialSupply').value);
+            const tokenImageFile = document.getElementById('tokenImage').files[0];
+            const websiteUrl = document.getElementById('websiteUrl').value;
+            const twitterUrl = document.getElementById('twitterUrl').value;
+            const tokenDescription = document.getElementById('tokenDescription').value;
+
+            // Opciones de revocación
+            const revokeMintAuthority = document.getElementById('revokeMintAuthority').checked;
+            const revokeFreezeAuthority = document.getElementById('revokeFreezeAuthority').checked;
+            const revokeUpdateAuthority = document.getElementById('revokeUpdateAuthority').checked;
+
+
+            if (!tokenImageFile) {
+                updateStatus("Por favor, selecciona una imagen para el logo del token.", 'error');
+                return;
+            }
+
+            updateStatus("Iniciando creación del token... Esto tomará un momento y varias aprobaciones en Phantom.", 'warning');
+            createTokenBtn.disabled = true; // Deshabilita el botón durante el proceso
+
+            try {
+                // Paso 1: Subir imagen y metadatos al backend (que los subirá a Pinata)
+                updateStatus("1/5: Subiendo imagen y metadatos a Pinata (vía tu servidor)...", 'warning');
+                const formData = new FormData();
+                formData.append('image', tokenImageFile);
+                formData.append('tokenName', tokenName);
+                formData.append('tokenSymbol', tokenSymbol);
+                formData.append('tokenDescription', tokenDescription);
+                formData.append('websiteUrl', websiteUrl);
+                formData.append('twitterUrl', twitterUrl);
+
+                const response = await fetch(`${BACKEND_URL}/api/upload-metadata`, {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                }
+
+                const { metadataUri } = await response.json();
+                console.log('URI de Metadatos obtenida del backend:', metadataUri);
+                updateStatus(`1/5: Metadatos subidos a Pinata. URI: <a href="https://ipfs.io/ipfs/${metadataUri.split('ipfs://')[1]}" target="_blank">${metadataUri}</a>`, 'info');
+
+                // Paso 2: Crear la cuenta de mint del token (Aprobación 1/3)
+                updateStatus("2/5: Creando la cuenta de mint del token (Aprobación 1/3)...", 'warning');
+                const mint = await createMint(
+                    connection,
+                    walletConnected, // Payer (la wallet conectada paga los fees)
+                    walletConnected, // Autoridad de minting inicial
+                    walletConnected, // Autoridad de congelación (freeze authority) inicial
+                    tokenDecimals // Decimales
+                );
+                console.log('Token Mint Address:', mint.toBase58());
+                updateStatus(`2/5: Token Mint creado: <a href="https://solscan.io/address/${mint.toBase58()}?cluster=devnet" target="_blank">${mint.toBase58()}</a>`, 'info');
+
+                // Paso 3: Crear la cuenta asociada del token para la wallet del usuario
+                updateStatus("3/5: Creando la cuenta asociada del token para tu wallet...", 'warning');
+                const tokenAccount = await getOrCreateAssociatedTokenAccount(
+                    connection,
+                    walletConnected, // Payer
+                    mint, // Dirección del token (mint)
+                    walletConnected // Propietario de la cuenta del token
+                );
+                console.log('Associated Token Account:', tokenAccount.address.toBase58());
+                updateStatus(`3/5: Cuenta Asociada creada: <a href="https://solscan.io/address/${tokenAccount.address.toBase58()}?cluster=devnet" target="_blank">${tokenAccount.address.toBase58()}</a>`, 'info');
+
+
+                // Paso 4: Acuñar los tokens iniciales (Aprobación 2/3)
+                updateStatus(`4/5: Acuñando ${initialSupply} tokens iniciales (Aprobación 2/3)...`, 'warning');
+                await mintTo(
+                    connection,
+                    walletConnected, // Payer
+                    mint, // Dirección del token (mint)
+                    tokenAccount.address, // Cuenta de destino (su ATA)
+                    walletConnected, // Autoridad de minting
+                    initialSupply * (10 ** tokenDecimals) // Cantidad total (con decimales)
+                );
+                updateStatus(`4/5: ${initialSupply} tokens acuñados a tu cuenta.`, 'info');
+
+
+                // Paso 5: Crear los metadatos de Metaplex (Aprobación 3/3)
+                updateStatus("5/5: Creando los metadatos de Metaplex (Aprobación 3/3)...", 'warning');
+                // `metaplexInstance.nfts().create` manejará la creación de la cuenta de metadatos y la vinculación
+                const { nft } = await metaplexInstance
+                    .nfts()
+                    .create({
+                        uri: metadataUri,
+                        name: tokenName,
+                        symbol: tokenSymbol,
+                        sellerFeeBasisPoints: 0, // 0 para tokens fungibles
+                        isMutable: true, // Se establece a true inicialmente para poder revocar UpdateAuthority
+                        tokenAddress: mint,
+                        tokenStandard: 0, // 0 = Fungible
+                        decimals: tokenDecimals,
+                    }, {
+                        payer: walletConnected // La billetera conectada paga y firma esta transacción
+                    });
+
+                const metadataPda = nft.metadataAddress; // Obtén la dirección PDA de los metadatos
+                updateStatus(`5/5: Metadatos de Metaplex creados. <br>Puedes verlos aquí: <a href="https://solscan.io/account/${metadataPda.toBase58()}?cluster=devnet" target="_blank">${metadataPda.toBase58()}</a>`, 'info');
+
+                // --- Opciones de revocación de autoridades (transacciones adicionales) ---
+                let totalApprovals = 3; // Contamos las 3 iniciales
+
+                // Revocar Autoridad de Acuñación (Mint Authority)
+                if (revokeMintAuthority) {
+                    totalApprovals++;
+                    updateStatus(`Revocando Autoridad de Acuñación (Mint Authority) (Aprobación ${totalApprovals}/?)`, 'warning');
+                    try {
+                        const transaction = new Transaction().add(
+                            setAuthority(
+                                mint, // Dirección del token (mint)
+                                walletConnected, // Autoridad actual (la wallet del creador)
+                                AuthorityType.MintTokens, // Tipo de autoridad a revocar
+                                null // Establecer a null para revocar
+                            )
+                        );
+                        const signature = await sendAndConfirmTransaction(connection, transaction, [walletConnected]);
+                        updateStatus(`Autoridad de Acuñación revocada exitosamente. Transacción: <a href="https://solscan.io/tx/${signature}?cluster=devnet" target="_blank">${signature.substring(0, 10)}...</a>`, 'info');
+                    } catch (error) {
+                        updateStatus(`Error al revocar Autoridad de Acuñación: ${error.message}`, 'error');
+                        console.error("Error al revocar Mint Authority:", error);
+                    }
+                }
+
+                // Revocar Autoridad de Congelación (Freeze Authority)
+                if (revokeFreezeAuthority) {
+                    totalApprovals++;
+                    updateStatus(`Revocando Autoridad de Congelación (Freeze Authority) (Aprobación ${totalApprovals}/?)`, 'warning');
+                    try {
+                        const transaction = new Transaction().add(
+                            setAuthority(
+                                mint, // Dirección del token (mint)
+                                walletConnected, // Autoridad actual (la wallet del creador)
+                                AuthorityType.FreezeAccount, // Tipo de autoridad a revocar
+                                null // Establecer a null para revocar
+                            )
+                        );
+                        const signature = await sendAndConfirmTransaction(connection, transaction, [walletConnected]);
+                        updateStatus(`Autoridad de Congelación revocada exitosamente. Transacción: <a href="https://solscan.io/tx/${signature}?cluster=devnet" target="_blank">${signature.substring(0, 10)}...</a>`, 'info');
+                    } catch (error) {
+                        updateStatus(`Error al revocar Autoridad de Congelación: ${error.message}`, 'error');
+                        console.error("Error al revocar Freeze Authority:", error);
+                    }
+                }
+
+                // Revocar Autoridad de Actualización de Metadatos (Update Authority)
+                if (revokeUpdateAuthority) {
+                    totalApprovals++;
+                    updateStatus(`Revocando Autoridad de Actualización de Metadatos (Aprobación ${totalApprovals}/?)`, 'warning');
+                    try {
+                        const metadataData = (await metaplexInstance.nfts().findByMetadata({ metadata: metadataPda })).json; // Obtener los datos actuales de los metadatos
+
+                        const instruction = createUpdateMetadataAccountV2Instruction(
+                            {
+                                metadata: metadataPda,
+                                updateAuthority: walletConnected, // La autoridad de actualización actual
+                            },
+                            {
+                                updateMetadataAccountArgsV2: {
+                                    data: {
+                                        name: metadataData.name, // Re-aplica el nombre existente
+                                        symbol: metadataData.symbol, // Re-aplica el símbolo existente
+                                        uri: metadataData.uri, // Re-aplica la URI existente
+                                        sellerFeeBasisPoints: 0, // Para tokens fungibles
+                                        creators: metadataData.properties.creators || null, // Mantiene creadores o null
+                                        collection: null,
+                                        uses: null,
+                                    },
+                                    isMutable: false, // ¡Clave para la inmutabilidad de metadatos!
+                                    updateAuthority: null, // ¡Clave para revocar la autoridad!
+                                },
+                            }
+                        );
+
+                        const transaction = new Transaction().add(instruction);
+                        const signature = await sendAndConfirmTransaction(connection, transaction, [walletConnected]);
+                        updateStatus(`Autoridad de Actualización de Metadatos revocada exitosamente. Transacción: <a href="https://solscan.io/tx/${signature}?cluster=devnet" target="_blank">${signature.substring(0, 10)}...</a>`, 'info');
+                    } catch (error) {
+                        updateStatus(`Error al revocar Autoridad de Actualización de Metadatos: ${error.message}`, 'error');
+                        console.error("Error al revocar Update Authority:", error);
+                    }
+                }
+
+                // Mensaje final de éxito con enlaces
+                updateStatus(`🎉 ¡Token creado y configurado exitosamente! 🎉 <br>
+                            **Dirección del Token (Mint Address):** <a href="https://solscan.io/token/${mint.toBase58()}?cluster=devnet" target="_blank">${mint.toBase58()}</a><br>
+                            **Tu Cuenta del Token:** <a href="https://solscan.io/account/${tokenAccount.address.toBase58()}?cluster=devnet" target="_blank">${tokenAccount.address.toBase58()}</a><br>
+                            **Metadatos del Token:** <a href="https://solscan.io/account/${metadataPda.toBase58()}?cluster=devnet" target="_blank">${metadataPda.toBase58()}</a><br><br>
+                            Ahora puedes ir a un DEX como Raydium para <a href="https://raydium.io/liquidity/add/" target="_blank">añadir liquidez</a> a tu token.`, 'success');
+
+            } catch (err) {
+                console.error("Error general al crear el token:", err);
+                let errorMessage = err.message || "Un error desconocido ocurrió.";
+                if (err.code === 4001) {
+                    errorMessage = "Transacción rechazada por el usuario en Phantom.";
+                } else if (err.message.includes("could not be confirmed")) {
+                    errorMessage = "Transacción no confirmada en la red. Intenta de nuevo. (Asegúrate de tener suficiente SOL).";
+                }
+                updateStatus(`❌ Error al crear el token: ${errorMessage}`, 'error');
+            } finally {
+                createTokenBtn.disabled = false; // Vuelve a habilitar el botón
+                // Re-obtener balance de SOL para reflejar fees pagados
+                if (walletConnected && connection) {
+                    const balance = await connection.getBalance(walletConnected);
+                    solBalanceDisplay.textContent = `Balance SOL: ${(balance / solanaWeb3.LAMPORTS_PER_SOL).toFixed(4)}`;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
