@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-	<meta charset="UTF-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Solana Token Creator</title>
+    <title>Creador de Tokens Solana Online</title>
     <script src="https://unpkg.com/@solana/web3.js@1.91.8/lib/index.iife.min.js"></script>
     <script src="https://unpkg.com/@solana/spl-token@0.4.0/lib/index.iife.min.js"></script>
     <script src="https://unpkg.com/@metaplex-foundation/js@0.20.1/dist/browser.min.js"></script>
-  </head>
     <style>
+        /* Tu CSS actual aquí (asegúrate de que sea exactamente el mismo que tienes) */
         body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f7f6; color: #333; }
         .container { max-width: 650px; margin: auto; background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         h1 { text-align: center; color: #2c3e50; margin-bottom: 25px; }
@@ -24,7 +24,7 @@
         }
         input[type="file"] {
             width: 100%;
-            padding: 10px 0; /* Ajuste para input file */
+            padding: 10px 0;
             margin-bottom: 15px;
             font-size: 16px;
         }
@@ -136,60 +136,53 @@
     </div>
 
     <script>
-        <script>
         // === ACCESO ROBUSTO A LIBRERÍAS CDN ===
         // Las librerías cargadas via CDN (IIFE format) suelen exponer sus contenidos
         // directamente a objetos globales en el 'window'.
-        // Usamos fallbacks por si el nombre global varía (ej. mayúscula/minúscula).
 
-        // Accede a las funciones de @solana/web3.js
-        // Prueba con 'solanaWeb3' (minúscula) o 'SolanaWeb3' (mayúscula)
-        const SolanaWeb3Global = window.solanaWeb3 || window.SolanaWeb3;
-        if (!SolanaWeb3Global) {
-            console.error("Error: @solana/web3.js no se cargó correctamente o no expuso su objeto global 'solanaWeb3'/'SolanaWeb3'.");
-            // Aquí podrías deshabilitar botones o mostrar un mensaje al usuario
+        let Connection, PublicKey, Transaction, clusterApiUrl, LAMPORTS_PER_SOL;
+        let createMint, getOrCreateAssociatedTokenAccount, mintTo, setAuthority, AuthorityType;
+        let Metaplex, toMetaplexFile, bundlrStorage, createCreateMetadataAccountV2Instruction, TOKEN_METADATA_PROGRAM_ID;
+
+        // @solana/web3.js
+        // La documentación de web3.js sugiere que el objeto global es 'solanaWeb3' (minúscula).
+        if (window.solanaWeb3) {
+            ({ Connection, PublicKey, Transaction, clusterApiUrl, LAMPORTS_PER_SOL } = window.solanaWeb3);
+        } else {
+            console.error("Error: @solana/web3.js no se cargó correctamente o no se encontró su objeto global 'solanaWeb3'.");
         }
-        const Connection = SolanaWeb3Global ? SolanaWeb3Global.Connection : undefined;
-        const PublicKey = SolanaWeb3Global ? SolanaWeb3Global.PublicKey : undefined;
-        const Transaction = SolanaWeb3Global ? SolanaWeb3Global.Transaction : undefined;
-        const clusterApiUrl = SolanaWeb3Global ? SolanaWeb3Global.clusterApiUrl : undefined;
 
-        // Accede a las funciones de @solana/spl-token
-        // Prueba con 'splToken' (minúscula)
-        const SplTokenGlobal = window.splToken;
-        if (!SplTokenGlobal) {
-            console.error("Error: @solana/spl-token no se cargó correctamente o no expuso su objeto global 'splToken'.");
+        // @solana/spl-token
+        // Hay reportes de que spl-token NO expone su API globalmente en un formato compatible con el navegador para uso directo.
+        // Si window.splToken no existe, es probable que se necesite un bundler (ej. Vite, Parcel).
+        if (window.splToken) {
+            ({ createMint, getOrCreateAssociatedTokenAccount, mintTo, setAuthority, AuthorityType } = window.splToken);
+        } else {
+            console.error("Error: @solana/spl-token no se cargó correctamente o no se encontró su objeto global 'splToken'. Puede que necesites un bundler para usarlo directamente en el navegador.");
         }
-        const createMint = SplTokenGlobal ? SplTokenGlobal.createMint : undefined;
-        const getOrCreateAssociatedTokenAccount = SplTokenGlobal ? SplTokenGlobal.getOrCreateAssociatedTokenAccount : undefined;
-        const mintTo = SplTokenGlobal ? SplTokenGlobal.mintTo : undefined;
-        const setAuthority = SplTokenGlobal ? SplTokenGlobal.setAuthority : undefined;
-        const AuthorityType = SplTokenGlobal ? SplTokenGlobal.AuthorityType : undefined;
 
-        // Accede a las funciones de @metaplex-foundation/js
-        // Prueba con 'metaplexJs' (minúscula)
-        const MetaplexJsGlobal = window.metaplexJs;
-        if (!MetaplexJsGlobal) {
-            console.error("Error: @metaplex-foundation/js no se cargó correctamente o no expuso su objeto global 'metaplexJs'.");
+        // @metaplex-foundation/js
+        // Metaplex JS también podría requerir un bundler si su objeto global no se encuentra.
+        if (window.metaplexJs) {
+            ({ Metaplex, toMetaplexFile, bundlrStorage, createCreateMetadataAccountV2Instruction, PROGRAM_ID: TOKEN_METADATA_PROGRAM_ID } = window.metaplexJs);
+        } else {
+            console.error("Error: @metaplex-foundation/js no se cargó correctamente o no se encontró su objeto global 'metaplexJs'. Puede que necesites un bundler para usarlo directamente en el navegador.");
         }
-        const Metaplex = MetaplexJsGlobal ? MetaplexJsGlobal.Metaplex : undefined;
-        const toMetaplexFile = MetaplexJsGlobal ? MetaplexJsGlobal.toMetaplexFile : undefined;
-        const bundlrStorage = MetaplexJsGlobal ? MetaplexJsGlobal.bundlrStorage : undefined;
-        const createCreateMetadataAccountV2Instruction = MetaplexJsGlobal ? MetaplexJsGlobal.createCreateMetadataAccountV2Instruction : undefined;
-        const TOKEN_METADATA_PROGRAM_ID = MetaplexJsGlobal ? MetaplexJsGlobal.PROGRAM_ID : undefined;
 
-        // === FIN DE ACCESO A LIBRERÍAS CDN ===
+        // --- FIN DE ACCESO A LIBRERÍAS CDN ---
 
-        // **IMPORTANTE**: Para pruebas locales, usa la URL de tu backend local.
-        // Cuando despliegues, cámbiala a la URL pública de tu backend desplegado (ej. Render)
-        const BACKEND_URL = "http://localhost:3000";
+        // Variables globales para la aplicación
+        let walletConnected = null;
+        let connection = null; // Inicializar a null
 
-		// Configuración de la conexión a Solana (Devnet para pruebas)
-		// Asegúrate de que Connection y clusterApiUrl no sean undefined antes de usar
-		const connection = (Connection && clusterApiUrl) ? new Connection(clusterApiUrl('devnet'), 'confirmed') : null;
-		let metaplexInstance = null; // Lo inicializaremos más tarde si incluimos Metaplex
+        // Asegúrate de que Connection y clusterApiUrl estén definidos antes de usar
+        if (Connection && clusterApiUrl) {
+            connection = new Connection(clusterApiUrl('devnet'), 'confirmed'); // Usamos 'devnet' para pruebas
+        } else {
+            console.error("No se pudo inicializar la conexión a Solana: Connection o clusterApiUrl son undefined.");
+        }
 
-        // ... (El resto de tu código JavaScript, incluyendo wallet, uploadToPinata, y el listener del botón)
+        let metaplexInstance = null; // Lo inicializaremos más tarde si incluimos Metaplex
 
         // Referencias a elementos del DOM
         const connectWalletBtn = document.getElementById('connectWalletBtn');
@@ -238,14 +231,23 @@
                     createTokenBtn.disabled = false;
 
                     // Configurar conexión a Solana (Devnet para pruebas)
-                    connection = new Connection(solanaWeb3.clusterApiUrl('devnet'), 'confirmed');
-
-                    // Configurar Metaplex para que use la conexión
-                    metaplexInstance = Metaplex.make(connection);
+                    // connection ya se inicializó condicionalmente más arriba.
+                    // Aquí solo nos aseguramos que metaplexInstance se cree si Metaplex está disponible.
+                    if (Metaplex && connection) {
+                        metaplexInstance = Metaplex.make(connection);
+                    } else {
+                        console.warn("Metaplex no está disponible o la conexión es inválida. Algunas funcionalidades de token pueden no estar activas.");
+                    }
 
                     // Obtener y mostrar el balance de SOL
-                    const balance = await connection.getBalance(walletConnected);
-                    solBalanceDisplay.textContent = `Balance SOL: ${(balance / solanaWeb3.LAMPORTS_PER_SOL).toFixed(4)}`;
+                    // Aseguramos que LAMPORTS_PER_SOL esté definido
+                    if (connection && LAMPORTS_PER_SOL) {
+                        const balance = await connection.getBalance(walletConnected);
+                        solBalanceDisplay.textContent = `Balance SOL: ${(balance / LAMPORTS_PER_SOL).toFixed(4)}`;
+                    } else {
+                        solBalanceDisplay.textContent = `Balance SOL: N/A (Error de conexión o librería)`;
+                    }
+
                     updateStatus("¡Billetera Phantom conectada! Ahora puedes crear tu token.", 'success');
 
                 } catch (err) {
@@ -271,6 +273,22 @@
                 updateStatus("Por favor, conecta tu billetera Phantom primero.", 'error');
                 return;
             }
+            
+            // Verifica que las funciones críticas de SPL-Token y Metaplex estén disponibles
+            if (!createMint || !getOrCreateAssociatedTokenAccount || !mintTo || !setAuthority || !AuthorityType || !metaplexInstance || !createCreateMetadataAccountV2Instruction || !TOKEN_METADATA_PROGRAM_ID) {
+                updateStatus("Error: Las librerías de Solana (spl-token o Metaplex) no se cargaron correctamente. No se puede crear el token. Por favor, revisa la consola para más detalles.", 'error');
+                console.error("Faltan funciones de librería:");
+                console.error("createMint:", createMint);
+                console.error("getOrCreateAssociatedTokenAccount:", getOrCreateAssociatedTokenAccount);
+                console.error("mintTo:", mintTo);
+                console.error("setAuthority:", setAuthority);
+                console.error("AuthorityType:", AuthorityType);
+                console.error("metaplexInstance:", metaplexInstance);
+                console.error("createCreateMetadataAccountV2Instruction:", createCreateMetadataAccountV2Instruction);
+                console.error("TOKEN_METADATA_PROGRAM_ID:", TOKEN_METADATA_PROGRAM_ID);
+                return;
+            }
+
 
             // Recoge los datos del formulario
             const tokenName = document.getElementById('tokenName').value;
@@ -306,6 +324,9 @@
                 formData.append('tokenDescription', tokenDescription);
                 formData.append('websiteUrl', websiteUrl);
                 formData.append('twitterUrl', twitterUrl);
+
+                // **IMPORTANTE**: La URL de tu backend. Asegúrate de que sea la URL pública de tu backend desplegado (ej. Render)
+                const BACKEND_URL = "http://localhost:3000"; // CAMBIA ESTO A LA URL PÚBLICA DE TU BACKEND
 
                 const response = await fetch(`${BACKEND_URL}/api/upload-metadata`, {
                     method: 'POST',
@@ -481,9 +502,9 @@
             } finally {
                 createTokenBtn.disabled = false; // Vuelve a habilitar el botón
                 // Re-obtener balance de SOL para reflejar fees pagados
-                if (walletConnected && connection) {
+                if (walletConnected && connection && LAMPORTS_PER_SOL) {
                     const balance = await connection.getBalance(walletConnected);
-                    solBalanceDisplay.textContent = `Balance SOL: ${(balance / solanaWeb3.LAMPORTS_PER_SOL).toFixed(4)}`;
+                    solBalanceDisplay.textContent = `Balance SOL: ${(balance / LAMPORTS_PER_SOL).toFixed(4)}`;
                 }
             }
         });
