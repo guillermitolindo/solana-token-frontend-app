@@ -24,7 +24,7 @@
         }
         input[type="file"] {
             width: 100%;
-            padding: 10px 0;
+            padding: 10px 0; /* Ajuste para input file */
             margin-bottom: 15px;
             font-size: 16px;
         }
@@ -142,7 +142,7 @@
 
         let Connection, PublicKey, Transaction, clusterApiUrl, LAMPORTS_PER_SOL;
         let createMint, getOrCreateAssociatedTokenAccount, mintTo, setAuthority, AuthorityType;
-        let Metaplex, toMetaplexFile, bundlrStorage, createCreateMetadataAccountV2Instruction, TOKEN_METADATA_PROGRAM_ID;
+        let Metaplex, toMetaplexFile, bundlrStorage, createCreateMetadataAccountV2Instruction, createUpdateMetadataAccountV2Instruction, TOKEN_METADATA_PROGRAM_ID; // Agregado createUpdateMetadataAccountV2Instruction aquí
 
         // @solana/web3.js
         // La documentación de web3.js sugiere que el objeto global es 'solanaWeb3' (minúscula).
@@ -164,7 +164,7 @@
         // @metaplex-foundation/js
         // Metaplex JS también podría requerir un bundler si su objeto global no se encuentra.
         if (window.metaplexJs) {
-            ({ Metaplex, toMetaplexFile, bundlrStorage, createCreateMetadataAccountV2Instruction, PROGRAM_ID: TOKEN_METADATA_PROGRAM_ID } = window.metaplexJs);
+            ({ Metaplex, toMetaplexFile, bundlrStorage, createCreateMetadataAccountV2Instruction, createUpdateMetadataAccountV2Instruction, PROGRAM_ID: TOKEN_METADATA_PROGRAM_ID } = window.metaplexJs);
         } else {
             console.error("Error: @metaplex-foundation/js no se cargó correctamente o no se encontró su objeto global 'metaplexJs'. Puede que necesites un bundler para usarlo directamente en el navegador.");
         }
@@ -173,9 +173,10 @@
 
         // Variables globales para la aplicación
         let walletConnected = null;
-        let connection = null; // Inicializar a null
+        let connection = null; // Se inicializa a null, se asigna en connectWallet
 
         // Asegúrate de que Connection y clusterApiUrl estén definidos antes de usar
+        // connection solo se inicializará aquí si las librerías se cargaron correctamente.
         if (Connection && clusterApiUrl) {
             connection = new Connection(clusterApiUrl('devnet'), 'confirmed'); // Usamos 'devnet' para pruebas
         } else {
@@ -213,9 +214,12 @@
                 return signature;
             } else {
                 // Fallback para cuando no se usa Phantom (no recomendado para dApps)
+                // Nota: El uso de `solanaWeb3` globalmente aquí podría ser problemático si no existe.
+                // Es mejor asegurarse de que las funciones se extraen al inicio del script.
                 console.warn("No Phantom detected or wallet not connected. Falling back to local signer.");
-                const signature = await solanaWeb3.sendAndConfirmTransaction(connection, transaction, signers);
-                return signature;
+                // Esto es solo un placeholder, en una dApp real, no permitirías esta rama sin Phantom.
+                // Podrías lanzar un error aquí si Phantom no está presente.
+                throw new Error("Phantom no detectado o billetera no conectada. No se puede firmar la transacción.");
             }
         }
 
@@ -230,13 +234,15 @@
                     walletAddressDisplay.textContent = `Conectado: ${walletConnected.toBase58().substring(0, 6)}...${walletConnected.toBase58().slice(-6)}`;
                     createTokenBtn.disabled = false;
 
-                    // Configurar conexión a Solana (Devnet para pruebas)
-                    // connection ya se inicializó condicionalmente más arriba.
-                    // Aquí solo nos aseguramos que metaplexInstance se cree si Metaplex está disponible.
-                    if (Metaplex && connection) {
+                    // Re-inicializar la conexión y Metaplex si aún no lo están,
+                    // o si se necesita asegurar que usen la misma conexión.
+                    if (!connection && Connection && clusterApiUrl) {
+                        connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
+                    }
+                    if (Metaplex && connection && !metaplexInstance) {
                         metaplexInstance = Metaplex.make(connection);
-                    } else {
-                        console.warn("Metaplex no está disponible o la conexión es inválida. Algunas funcionalidades de token pueden no estar activas.");
+                    } else if (!Metaplex) {
+                        console.warn("Metaplex no está disponible. Algunas funcionalidades de token pueden no estar activas.");
                     }
 
                     // Obtener y mostrar el balance de SOL
@@ -255,6 +261,7 @@
                     updateStatus(`Error al conectar Phantom: ${err.message}`, 'error');
                     walletConnected = null;
                     walletAddressDisplay.textContent = 'Estado: Desconectado';
+                    solBalanceDisplay.textContent = ''; // Limpiar el balance
                     createTokenBtn.disabled = true;
                 }
             } else {
@@ -275,7 +282,7 @@
             }
             
             // Verifica que las funciones críticas de SPL-Token y Metaplex estén disponibles
-            if (!createMint || !getOrCreateAssociatedTokenAccount || !mintTo || !setAuthority || !AuthorityType || !metaplexInstance || !createCreateMetadataAccountV2Instruction || !TOKEN_METADATA_PROGRAM_ID) {
+            if (!createMint || !getOrCreateAssociatedTokenAccount || !mintTo || !setAuthority || !AuthorityType || !metaplexInstance || !createCreateMetadataAccountV2Instruction || !createUpdateMetadataAccountV2Instruction || !TOKEN_METADATA_PROGRAM_ID) {
                 updateStatus("Error: Las librerías de Solana (spl-token o Metaplex) no se cargaron correctamente. No se puede crear el token. Por favor, revisa la consola para más detalles.", 'error');
                 console.error("Faltan funciones de librería:");
                 console.error("createMint:", createMint);
@@ -285,6 +292,7 @@
                 console.error("AuthorityType:", AuthorityType);
                 console.error("metaplexInstance:", metaplexInstance);
                 console.error("createCreateMetadataAccountV2Instruction:", createCreateMetadataAccountV2Instruction);
+                console.error("createUpdateMetadataAccountV2Instruction:", createUpdateMetadataAccountV2Instruction); // Añadido para depuración
                 console.error("TOKEN_METADATA_PROGRAM_ID:", TOKEN_METADATA_PROGRAM_ID);
                 return;
             }
